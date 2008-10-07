@@ -2,8 +2,8 @@ package LEOCHARRE::Test;
 use strict 'vars';
 use Test::Builder::Module;
 use vars qw(@EXPORT @ISA $VERSION $PART_NUMBER);
-@EXPORT = qw(ok_part ok test_is_interactive);
-$VERSION = sprintf "%d.%02d", q$Revision: 1.3 $ =~ /(\d+)/g;
+@EXPORT = qw(ok_part ok test_is_interactive ok_mysqld);
+$VERSION = sprintf "%d.%02d", q$Revision: 1.4 $ =~ /(\d+)/g;
 @ISA    = qw(Test::Builder::Module);
 use Carp;
 
@@ -26,6 +26,43 @@ sub ok_part {
 sub test_is_interactive { 
    return -t STDIN && -t STDOUT;
 }
+
+sub ok_mysqld {
+   my $host = shift;
+
+   require DBI;
+   require DBD::mysql;
+
+   # make a bogus connect on purpose
+   my $user = 'a'.time().( int rand(20) );
+   my $pass = 'b'.time().( int rand(20) );
+   my $name = 'c'.time().( int rand(20) );
+
+   my $h = "DBI:mysql:database=$name;host=$host";
+   
+   my $dbh = DBI->connect($h, $user, $pass,{ RaiseError => 0, PrintError => 0});
+   my $err = $DBI::errstr;
+
+   my $result;
+
+   if($err=~/Unknown MySQL server host/i){
+      $result = 0;;
+   }
+   elsif ( $err=~/Access denied for user/i ){
+      $result = 1;
+   }
+   else {
+      warn("dont know how to interpret this error: '$err'");
+      $result = 0;
+   }
+
+   return ok($result, "mysql host is up: $host");
+
+
+
+
+}
+
 
 
 
@@ -57,6 +94,11 @@ Just a separator.
 =head2 test_is_interactive()
 
 Returns boolean. If run from a terminal, returns true, if from cpan, false.
+
+=head2 ok_mysqld()
+
+Argument is hostname.
+Tests if a mysqld host server is up.
 
 
 
