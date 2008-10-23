@@ -3,7 +3,7 @@ use strict 'vars';
 use Test::Builder::Module;
 use vars qw(@EXPORT @ISA $VERSION $PART_NUMBER);
 @EXPORT = qw(ok_part ok test_is_interactive ok_mysqld);
-$VERSION = sprintf "%d.%02d", q$Revision: 1.4 $ =~ /(\d+)/g;
+$VERSION = sprintf "%d.%02d", q$Revision: 1.9 $ =~ /(\d+)/g;
 @ISA    = qw(Test::Builder::Module);
 use Carp;
 
@@ -29,6 +29,16 @@ sub test_is_interactive {
 
 sub ok_mysqld {
    my $host = shift;
+   $host ||= 'localhost';
+
+
+   if ( $host eq 'localhost' ){
+      my $daemon ='/etc/init.d/mysqld';
+      if (-e $daemon ){
+         my $response = `$daemon status`;
+         return ok( $response!~/stopped/, "mysqld daemon on host '$host' $daemon is running?");
+      }
+   }
 
    require DBI;
    require DBD::mysql;
@@ -45,7 +55,7 @@ sub ok_mysqld {
 
    my $result;
 
-   if($err=~/Unknown MySQL server host/i){
+   if($err=~/Unknown MySQL server host|Can\'t connect to local MySQL server/i){
       $result = 0;;
    }
    elsif ( $err=~/Access denied for user/i ){
@@ -56,7 +66,9 @@ sub ok_mysqld {
       $result = 0;
    }
 
-   return ok($result, "mysql host is up: $host");
+   return ok($result, "[$result] mysql host '$host' is up ? " . ($result ? 'yes' : "no. 
+   Check your /etc/init.d/mysqld status or equivalent."));
+
 
 
 
